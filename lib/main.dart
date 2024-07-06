@@ -1,16 +1,22 @@
 import 'dart:async';
+import 'package:alarm_app_020724/Medicine_notification/medicine_notification_manager.dart';
+import 'package:alarm_app_020724/Medicine_notification/medicine_notification_model.dart';
+import 'package:alarm_app_020724/Medicine_notification/medicine_notification_setup.dart';
 import 'package:alarm_app_020724/notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:audioplayers/audioplayers.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Notifications().initializeNotifications();
   tz.initializeTimeZones();
+  await Hive.initFlutter();
+  await Hive.openBox('medicineAlart');
   runApp(AlarmApp());
 }
 
@@ -39,6 +45,7 @@ class AlarmScreen extends StatefulWidget {
 
 class _AlarmScreenState extends State<AlarmScreen> {
   List<Alarm> alarms = [];
+  int _id = 0;
 
   @override
   void initState() {
@@ -174,10 +181,18 @@ class _AlarmScreenState extends State<AlarmScreen> {
             ElevatedButton(
               child: const Text('Save'),
               onPressed: () {
+                _id++;
                 if (_formKey.currentState!.validate()) {
                   _formKey.currentState!.save();
                   _addAlarm(_name, _time);
-                  _scheduleAlarm(_time, _name);
+                  // _scheduleAlarm(_time, _name);
+                  for (var i = 0; i < 3; i++) {
+                    DateTime dateTime = DateTime.now().add(Duration(days: i));
+                    NotificationManager().setNotification(id: _id + i, name: _name, tekingTime: "", time: DateTime(dateTime.year, dateTime.month, dateTime.day, _time.hour, _time.minute));
+                    MedicineReminderModel().initialization(_id + i, _name, "taking time", 'note', DateTime(dateTime.year, dateTime.month, dateTime.day, _time.hour, _time.minute));
+                    AdhanNotificationSetup().setNotificationForMedicine(context, _id + i, _name, "takingTime", "note", DateTime(dateTime.year, dateTime.month, dateTime.day, _time.hour, _time.minute));
+                  }
+
                   Navigator.of(context).pop();
                 }
               },
